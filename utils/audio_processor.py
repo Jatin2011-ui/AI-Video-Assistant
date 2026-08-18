@@ -1,14 +1,40 @@
 import yt_dlp
 from pydub import AudioSegment
 import os 
+import tempfile
 
 DOWNLOAD_DIR = 'downloads'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+def _resolve_cookiefile() -> tuple[str | None, bool]:
+    cookiefile = os.getenv("YT_COOKIES_FILE")
+    if cookiefile and os.path.isfile(cookiefile):
+        return cookiefile, False
+
+    cookie_content = os.getenv("YT_COOKIES")
+    if not cookie_content:
+        try:
+            import streamlit as st
+            cookie_content = st.secrets.get("YT_COOKIES")
+        except Exception:
+            cookie_content = None
+
+    if not cookie_content:
+        return None, False
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as temp_cookie:
+        temp_cookie.write(cookie_content)
+        return temp_cookie.name, True
 
 def download_youtube_audio(url :str) -> str:
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
     ydl_opts ={
         "format" : "bestaudio/best",
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "web"],
+            }
+        },
         "outtmpl" : output_path,
         "postprocessors" :[
             {
@@ -19,10 +45,18 @@ def download_youtube_audio(url :str) -> str:
         ],
         "quiet" : True,
     }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".mp4", ".wav")
-    return filename
+    cookiefile, should_cleanup_cookiefile = _resolve_cookiefile()
+    if cookiefile:
+        ydl_opts["cookiefile"] = cookiefile
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".mp4", ".wav")
+        return filename
+    finally:
+        if should_cleanup_cookiefile and cookiefile and os.path.exists(cookiefile):
+            os.remove(cookiefile)
 
 
 def convert_to_wav(input_path: str) -> str:
