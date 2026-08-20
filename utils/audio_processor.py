@@ -51,7 +51,7 @@ def download_youtube_audio(url :str) -> str:
     "retries": 3,
     "fragment_retries": 3,
 }
-    }
+    
     cookiefile, should_cleanup_cookiefile = _resolve_cookiefile()
     if cookiefile:
         ydl_opts["cookiefile"] = cookiefile
