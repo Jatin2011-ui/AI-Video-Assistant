@@ -32,7 +32,7 @@ def download_youtube_audio(url :str) -> str:
         "format" : "bestaudio/best",
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "web"],
+                "player_client": ["tv_embedded", "web"],
             }
         },
         "outtmpl" : output_path,
@@ -44,6 +44,13 @@ def download_youtube_audio(url :str) -> str:
             }
         ],
         "quiet" : True,
+        
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    },
+    "retries": 3,
+    "fragment_retries": 3,
+}
     }
     cookiefile, should_cleanup_cookiefile = _resolve_cookiefile()
     if cookiefile:
